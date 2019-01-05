@@ -6,102 +6,10 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <com.robinhood.ticker.TickerView
-        android:id="@+id/tickerView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        android:gravity="center"
-        android:textColor="@color/colorPrimary"
-        android:textSize="32sp"
-        android:text="$0.00"
-        app:ticker_animationDuration="1500"/>
-
-    <TextView
-        android:id="@+id/start_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:text="Start Counting!"
-        android:textSize="24sp"
-        app:layout_constraintBottom_toTopOf="@+id/tickerView"
-        app:layout_constraintEnd_toEndOf="@+id/tickerView"
-        app:layout_constraintStart_toStartOf="@+id/tickerView" />
-
-    <EditText
-        android:id="@+id/wage_edit_text"
-        android:layout_width="213dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:layout_marginLeft="8dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginRight="8dp"
-        android:ems="10"
-        android:inputType="number"
-        android:hint="$0.00"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/wage_caption" />
-
-    <TextView
-        android:id="@+id/wage_caption"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:layout_marginLeft="8dp"
-        android:layout_marginTop="32dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginRight="8dp"
-        android:text="Hourly Wage"
-        android:textSize="24sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <TextView
-        android:id="@+id/tax_label"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:layout_marginLeft="8dp"
-        android:layout_marginTop="32dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginRight="8dp"
-        android:text="Tax Accrued"
-        android:textSize="16sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/tickerView" />
-
-    <com.robinhood.ticker.TickerView
-        android:id="@+id/taxTickerView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:gravity="center"
-        android:text="$0.00"
-        android:textColor="@color/colorPrimary"
-        android:textSize="32sp"
-        app:layout_constraintEnd_toEndOf="@+id/tax_label"
-        app:layout_constraintStart_toStartOf="@+id/tax_label"
-        app:layout_constraintTop_toBottomOf="@+id/tax_label"
-        app:ticker_animationDuration="1500" />
-
-    <Spinner
-        android:id="@+id/stateSpinner"
-        android:layout_width="277dp"
-        android:layout_height="24dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginLeft="8dp"
-        android:layout_marginTop="20dp"
-        app:layout_constraintEnd_toEndOf="@+id/wage_edit_text"
-        app:layout_constraintHorizontal_bias="0.527"
-        app:layout_constraintStart_toStartOf="@+id/wage_edit_text"
-        app:layout_constraintTop_toBottomOf="@+id/wage_edit_text" />
-
+    <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:id="@+id/currentWageLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
 
 </android.support.constraint.ConstraintLayout>

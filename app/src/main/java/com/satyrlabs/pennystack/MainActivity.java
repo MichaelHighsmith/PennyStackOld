@@ -1,7 +1,13 @@
 package com.satyrlabs.pennystack;
 
+import android.content.Intent;
+import android.support.annotation.Nullable;
+import android.support.v4.app.Fragment;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
@@ -24,97 +30,78 @@ import io.reactivex.schedulers.Schedulers;
 
 public class MainActivity extends AppCompatActivity {
 
-    TickerView tickerView;
-    TickerView taxTickerView;
-    TextView startButton;
-    EditText hourlyWageEditText;
+    public static final int NEW_EDIT_VALUES = 111;
 
-    Spinner stateSpinner;
+    TaxIncludedWageFragment taxIncludedWageFragment;
+    BasicWageFragment basicWageFragment;
+    Fragment currentActiveFragment;
 
-    boolean counting = false;
-    Disposable disposable;
-    Disposable taxDisposable;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        startButton = findViewById(R.id.start_button);
-        tickerView = findViewById(R.id.tickerView);
-        taxTickerView = findViewById(R.id.taxTickerView);
-        hourlyWageEditText = findViewById(R.id.wage_edit_text);
-        tickerView.setCharacterLists(TickerUtils.provideNumberList());
-        taxTickerView.setCharacterLists(TickerUtils.provideNumberList());
-        stateSpinner = findViewById(R.id.stateSpinner);
+        basicWageFragment = new BasicWageFragment();
+        taxIncludedWageFragment = new TaxIncludedWageFragment();
+        currentActiveFragment = basicWageFragment;
 
-        stateSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, TaxCalculator.State.values()));
+        getSupportFragmentManager()
+                .beginTransaction()
+                .add(R.id.currentWageLayout, basicWageFragment)
+                .add(R.id.currentWageLayout, taxIncludedWageFragment)
+                .hide(taxIncludedWageFragment)
+                .commit();
 
-        startButton.setOnClickListener(v -> startCounting());
+
     }
 
-    public void startCounting() {
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.main_menu, menu);
+        return true;
+    }
 
-        String hourlyWageString = hourlyWageEditText.getText().toString();
-        float hourlyWage = Float.valueOf(hourlyWageString);
-        float penniesPerHour = hourlyWage * 100;
-        float penniesPerMinute = penniesPerHour / 60;
-        float penniesPerSecond = penniesPerMinute / 60;
-        float secondsPerPenny = 60 / penniesPerMinute;
-        long millisecondsPerPenny = (long) (secondsPerPenny * 1000);
-
-
-        //Tax version
-        TaxCalculator taxCalculator = new TaxCalculator(stateSpinner.getSelectedItem().toString(), hourlyWage);
-        float tax = taxCalculator.calculateTaxRate();
-        float actualEarning = 1 - tax;
-
-        millisecondsPerPenny = (long) (millisecondsPerPenny / actualEarning);
-        float taxPenniesPerMinute = penniesPerMinute * tax;
-        float taxSecondsPerPenny = 60 / taxPenniesPerMinute;
-        long taxMillisecondsPerPenny = (long) (taxSecondsPerPenny * 1000);
-
-
-
-        taxTickerView.setAnimationDuration(taxMillisecondsPerPenny);
-
-        tickerView.setAnimationDuration(millisecondsPerPenny);
-
-        if (!counting) {
-            disposable = Observable.interval(1000, millisecondsPerPenny, TimeUnit.MILLISECONDS)
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe(this::addPenny);
-
-            taxDisposable = Observable.interval(1000, taxMillisecondsPerPenny, TimeUnit.MILLISECONDS)
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe(this::addTaxPenny);
-
-            startButton.setText("Stop Counting");
-
-            counting = true;
-        } else {
-            startButton.setText("Start Counting");
-            disposable.dispose();
-            taxDisposable.dispose();
-            counting = false;
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.change_layout:
+                startActivityForResult(new Intent(this, EditOptionsActivity.class), NEW_EDIT_VALUES);
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
         }
     }
 
-    public void addPenny(Long newNumber) {
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
 
-        NumberFormat n = NumberFormat.getCurrencyInstance(Locale.US);
-        String s = n.format(newNumber / 100.0);
+        if (requestCode == NEW_EDIT_VALUES) {
+            if (resultCode == RESULT_OK) {
 
-        tickerView.setText(s);
-    }
+                String selectedLayout = data.getStringExtra("selectedLayout");
 
-    public void addTaxPenny(Long newNumber) {
-
-        NumberFormat n = NumberFormat.getCurrencyInstance(Locale.US);
-        String s = n.format(newNumber / 100.0);
-
-        taxTickerView.setText(s);
+                switch (selectedLayout) {
+                    case "basic":
+                        getSupportFragmentManager()
+                                .beginTransaction()
+                                .show(basicWageFragment)
+                                .hide(taxIncludedWageFragment)
+                                .commit();
+                        currentActiveFragment = basicWageFragment;
+                        break;
+                    case "taxIncluded":
+                        getSupportFragmentManager()
+                                .beginTransaction()
+                                .show(taxIncludedWageFragment)
+                                .hide(basicWageFragment)
+                                .commit();
+                        currentActiveFragment = taxIncludedWageFragment;
+                        break;
+                }
+            }
+        }
     }
 }
