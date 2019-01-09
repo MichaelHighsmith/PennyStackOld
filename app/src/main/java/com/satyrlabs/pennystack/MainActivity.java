@@ -52,8 +52,6 @@ public class MainActivity extends AppCompatActivity {
                 .add(R.id.currentWageLayout, taxIncludedWageFragment)
                 .hide(taxIncludedWageFragment)
                 .commit();
-
-
     }
 
     @Override

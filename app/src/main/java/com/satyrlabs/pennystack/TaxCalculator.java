@@ -1,195 +1,223 @@
 package com.satyrlabs.pennystack;
 
-import static com.satyrlabs.pennystack.TaxCalculator.State.Alabama;
-import static java.lang.Enum.valueOf;
+import android.content.Context;
+
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.schedulers.Schedulers;
+import io.reactivex.subjects.BehaviorSubject;
 
 public class TaxCalculator {
 
-    //this class takes in a federal and state tax rate, Social security (6.2%), Medicare (1.45%) and an hourly rate
-    //using these it calculates the total tax rate to be taken out of the pennies per millisecond.  Then this class returns
-    //a new "real" earnings per millisecond and tax amounts per millisecond for each value
-
     private String state;
     private float hourlyWage;
+    private Context context;
 
-    TaxCalculator(String state, float hourlyWage) {
+    private float ssTax = 0.062f;
+    private float medicareTax = 0.0145f;
+
+    BehaviorSubject<Float> taxSubject = BehaviorSubject.create();
+
+    TaxCalculator(Context context, String state, float hourlyWage) {
+        this.context = context;
         this.state = state;
         this.hourlyWage = hourlyWage;
     }
 
 
-    public float calculateTaxRate() {
-        float penniesPerHour = hourlyWage * 100;
-        float penniesPerMinute = penniesPerHour / 60;
-        float penniesPerSecond = penniesPerMinute / 60;
-        float secondsPerPenny = 60 / penniesPerMinute;
-        long millisecondsPerPenny = (long) (secondsPerPenny * 1000);
-
-        float stateTaxRate = getStateTaxRate(state);
+    public float calculateTaxRate(float stateTax) {
         float federalTaxRate = getFederalTaxRate(hourlyWage);
-        float totalTaxRate = stateTaxRate + federalTaxRate + 0.062f + 0.0145f;
-        return totalTaxRate;
+        return stateTax + federalTaxRate + ssTax + medicareTax;
     }
 
     private float getFederalTaxRate(float hourlyWage) {
+        //TODO add federal income tax info
         return 0.22f;
     }
 
-    private float getStateTaxRate(String state) {
+    public BehaviorSubject<Float> getStateTaxRate(String state) {
 
-        float taxRate = 0.0f;
+        TaxService service = ApiClient.getClient().create(TaxService.class);
+        Disposable taxInfoDisposable = service.getTaxInfo(state)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(stateTaxResponse -> {
 
+                    float taxRate = 0.0f;
+
+                    if (stateTaxResponse.single.type != null && stateTaxResponse.single.type.equals("none")) {
+                        taxSubject.onNext(taxRate);
+                        return;
+                    }
+
+                    TaxBracket[] taxBrackets = stateTaxResponse.single.income_tax_brackets;
+
+                    for (int i = taxBrackets.length - 1; i < taxBrackets.length; i--) {
+                        if (hourlyWage * 2000 > taxBrackets[i].bracket) {
+                            taxRate = taxBrackets[i].marginal_rate;
+                            break;
+                        }
+                    }
+
+                    taxSubject.onNext(taxRate);
+                });
+
+        return taxSubject;
+    }
+
+    public String getStateAbbreviation(String state) {
+        String abbreviation = "NY";
         switch (State.valueOf(state)) {
             case Alabama:
-                taxRate = 0.05f;
+                abbreviation = "AL";
                 break;
             case Alaska:
-                taxRate = 0.0f;
+                abbreviation = "AK";
                 break;
             case Arizona:
-                taxRate = 0.0454f;
+                abbreviation = "AZ";
                 break;
             case Arkansas:
-                taxRate = 0.069f;
+                abbreviation = "AR";
                 break;
             case California:
-                taxRate = 0.133f;
+                abbreviation = "CA";
                 break;
             case Colorado:
-                taxRate = 0.0463f;
+                abbreviation = "CO";
                 break;
             case Connecticut:
-                taxRate = 0.4f;
+                abbreviation = "CT";
                 break;
             case Deleware:
-                taxRate = 0.4f;
+                abbreviation = "DE";
                 break;
             case Florida:
-                taxRate = 0.4f;
+                abbreviation = "FL";
                 break;
             case Georgia:
-                taxRate = 0.4f;
+                abbreviation = "GA";
                 break;
             case Hawaii:
-                taxRate = 0.4f;
+                abbreviation = "HI";
                 break;
             case Idaho:
-                taxRate = 0.4f;
+                abbreviation = "ID";
                 break;
             case Illinois:
-                taxRate = 0.4f;
+                abbreviation = "IL";
                 break;
             case Indiana:
-                taxRate = 0.4f;
+                abbreviation = "IN";
                 break;
             case Iowa:
-                taxRate = 0.4f;
+                abbreviation = "IA";
                 break;
             case Kansas:
-                taxRate = 0.4f;
+                abbreviation = "KS";
                 break;
             case Kentucky:
-                taxRate = 0.4f;
+                abbreviation = "KY";
                 break;
             case Louisiana:
-                taxRate = 0.4f;
+                abbreviation = "LA";
                 break;
             case Maine:
-                taxRate = 0.4f;
+                abbreviation = "ME";
                 break;
             case Maryland:
-                taxRate = 0.4f;
+                abbreviation = "MD";
                 break;
             case Massachusetts:
-                taxRate = 0.4f;
+                abbreviation = "MA";
                 break;
             case Michigan:
-                taxRate = 0.4f;
+                abbreviation = "MI";
                 break;
             case Minnesota:
-                taxRate = 0.4f;
+                abbreviation = "MS";
                 break;
             case Missouri:
-                taxRate = 0.4f;
+                abbreviation = "MO";
                 break;
             case Montana:
-                taxRate = 0.4f;
+                abbreviation = "MT";
                 break;
             case Nebraska:
-                taxRate = 0.4f;
+                abbreviation = "NE";
                 break;
             case Nevada:
-                taxRate = 0.4f;
+                abbreviation = "NV";
                 break;
             case NewHampshire:
-                taxRate = 0.4f;
+                abbreviation = "NH";
                 break;
             case NewJersey:
-                taxRate = 0.4f;
+                abbreviation = "NJ";
                 break;
             case NewMexico:
-                taxRate = 0.4f;
+                abbreviation = "NM";
                 break;
             case NewYork:
-                taxRate = 0.4f;
+                abbreviation = "NY";
                 break;
             case NorthCarolina:
-                taxRate = 0.4f;
+                abbreviation = "NC";
                 break;
             case NorthDakota:
-                taxRate = 0.4f;
+                abbreviation = "ND";
                 break;
             case Ohio:
-                taxRate = 0.4f;
+                abbreviation = "OH";
                 break;
             case Oklahoma:
-                taxRate = 0.4f;
+                abbreviation = "OK";
                 break;
             case Oregon:
-                taxRate = 0.4f;
+                abbreviation = "OR";
                 break;
             case Pennsylvania:
-                taxRate = 0.4f;
+                abbreviation = "PA";
                 break;
             case RhodeIsland:
-                taxRate = 0.4f;
+                abbreviation = "RI";
                 break;
             case SouthCarolina:
-                taxRate = 0.4f;
+                abbreviation = "SC";
                 break;
             case SouthDakota:
-                taxRate = 0.4f;
+                abbreviation = "SD";
                 break;
             case Tennessee:
-                taxRate = 0.4f;
+                abbreviation = "TN";
                 break;
             case Texas:
-                taxRate = 0.4f;
+                abbreviation = "TX";
                 break;
             case Utah:
-                taxRate = 0.4f;
+                abbreviation = "UT";
                 break;
             case Vermont:
-                taxRate = 0.4f;
+                abbreviation = "VT";
                 break;
             case Virginia:
-                taxRate = 0.4f;
+                abbreviation = "VA";
                 break;
             case Washington:
-                taxRate = 0.4f;
+                abbreviation = "WA";
                 break;
             case WestVirginia:
-                taxRate = 0.4f;
+                abbreviation = "WV";
                 break;
             case Wisconsin:
-                taxRate = 0.4f;
+                abbreviation = "WI";
                 break;
             case Wyoming:
-                taxRate = 0.4f;
+                abbreviation = "WY";
                 break;
         }
 
-        return taxRate;
+        return abbreviation;
     }
 
     enum State {
@@ -202,7 +230,6 @@ public class TaxCalculator {
         SouthDakota, Tennessee, Texas, Utah, Vermont, Virginia, Washington, WestVirginia,
         Wisconsin, Wyoming
     }
-
 }
 
 

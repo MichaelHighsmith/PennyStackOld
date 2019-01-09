@@ -28,13 +28,15 @@ public class TaxIncludedWageFragment extends Fragment {
     TickerView taxTickerView;
     TextView startButton;
     EditText hourlyWageEditText;
-
     Spinner stateSpinner;
 
-    boolean counting = false;
     Disposable disposable;
     Disposable taxDisposable;
+    Disposable stateTaxDisposable;
 
+    TaxCalculator taxCalculator;
+
+    boolean counting = false;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup parentViewGroup, Bundle savedInstanceState) {
@@ -51,14 +53,12 @@ public class TaxIncludedWageFragment extends Fragment {
 
         stateSpinner.setAdapter(new ArrayAdapter<>(getContext(), android.R.layout.simple_spinner_item, TaxCalculator.State.values()));
 
-        startButton.setOnClickListener(v -> startCounting());
+        startButton.setOnClickListener(v -> setUpInfo());
 
         return view;
     }
 
-
-    public void startCounting() {
-
+    public void startCounting(Float stateTax) {
         String hourlyWageString = hourlyWageEditText.getText().toString();
         float hourlyWage = Float.valueOf(hourlyWageString);
         float penniesPerHour = hourlyWage * 100;
@@ -67,10 +67,7 @@ public class TaxIncludedWageFragment extends Fragment {
         float secondsPerPenny = 60 / penniesPerMinute;
         long millisecondsPerPenny = (long) (secondsPerPenny * 1000);
 
-
-        //Tax version
-        TaxCalculator taxCalculator = new TaxCalculator(stateSpinner.getSelectedItem().toString(), hourlyWage);
-        float tax = taxCalculator.calculateTaxRate();
+        float tax = taxCalculator.calculateTaxRate(stateTax);
         float actualEarning = 1 - tax;
 
         millisecondsPerPenny = (long) (millisecondsPerPenny / actualEarning);
@@ -78,31 +75,41 @@ public class TaxIncludedWageFragment extends Fragment {
         float taxSecondsPerPenny = 60 / taxPenniesPerMinute;
         long taxMillisecondsPerPenny = (long) (taxSecondsPerPenny * 1000);
 
-
         taxTickerView.setAnimationDuration(taxMillisecondsPerPenny);
 
         tickerView.setAnimationDuration(millisecondsPerPenny);
 
-        if (!counting) {
-            disposable = Observable.interval(1000, millisecondsPerPenny, TimeUnit.MILLISECONDS)
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe(this::addPenny);
+        disposable = Observable.interval(1000, millisecondsPerPenny, TimeUnit.MILLISECONDS)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(this::addPenny);
 
-            taxDisposable = Observable.interval(1000, taxMillisecondsPerPenny, TimeUnit.MILLISECONDS)
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe(this::addTaxPenny);
+        taxDisposable = Observable.interval(1000, taxMillisecondsPerPenny, TimeUnit.MILLISECONDS)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(this::addTaxPenny);
+    }
 
-            startButton.setText("Stop Counting");
+    public void setUpInfo() {
 
-            counting = true;
-        } else {
-            startButton.setText("Start Counting");
-            disposable.dispose();
-            taxDisposable.dispose();
-            counting = false;
-        }
+        String hourlyWageString = hourlyWageEditText.getText().toString();
+        float hourlyWage = Float.valueOf(hourlyWageString);
+
+        taxCalculator = new TaxCalculator(getContext(), stateSpinner.getSelectedItem().toString(), hourlyWage);
+        String stateAbbreviation = taxCalculator.getStateAbbreviation(stateSpinner.getSelectedItem().toString());
+
+        stateTaxDisposable = taxCalculator.getStateTaxRate(stateAbbreviation).subscribe(floatValue -> {
+            if (!counting) {
+                startCounting(floatValue / 100);
+                startButton.setText("Stop Counting");
+                counting = true;
+            } else {
+                startButton.setText("Start Counting");
+                disposable.dispose();
+                taxDisposable.dispose();
+                counting = false;
+            }
+        });
     }
 
     public void addPenny(Long newNumber) {
