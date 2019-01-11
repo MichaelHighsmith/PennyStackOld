@@ -58,7 +58,7 @@ public class TaxIncludedWageFragment extends Fragment {
         return view;
     }
 
-    public void startCounting(Float stateTax) {
+    public void startCounting(Float totalTax) {
         String hourlyWageString = hourlyWageEditText.getText().toString();
         float hourlyWage = Float.valueOf(hourlyWageString);
         float penniesPerHour = hourlyWage * 100;
@@ -67,16 +67,14 @@ public class TaxIncludedWageFragment extends Fragment {
         float secondsPerPenny = 60 / penniesPerMinute;
         long millisecondsPerPenny = (long) (secondsPerPenny * 1000);
 
-        float tax = taxCalculator.calculateTaxRate(stateTax);
-        float actualEarning = 1 - tax;
+        float actualEarning = 1 - totalTax;
 
         millisecondsPerPenny = (long) (millisecondsPerPenny / actualEarning);
-        float taxPenniesPerMinute = penniesPerMinute * tax;
+        float taxPenniesPerMinute = penniesPerMinute * totalTax;
         float taxSecondsPerPenny = 60 / taxPenniesPerMinute;
         long taxMillisecondsPerPenny = (long) (taxSecondsPerPenny * 1000);
 
         taxTickerView.setAnimationDuration(taxMillisecondsPerPenny);
-
         tickerView.setAnimationDuration(millisecondsPerPenny);
 
         disposable = Observable.interval(1000, millisecondsPerPenny, TimeUnit.MILLISECONDS)
@@ -98,9 +96,9 @@ public class TaxIncludedWageFragment extends Fragment {
         taxCalculator = new TaxCalculator(getContext(), stateSpinner.getSelectedItem().toString(), hourlyWage);
         String stateAbbreviation = taxCalculator.getStateAbbreviation(stateSpinner.getSelectedItem().toString());
 
-        stateTaxDisposable = taxCalculator.getStateTaxRate(stateAbbreviation).subscribe(floatValue -> {
+        stateTaxDisposable = taxCalculator.getTaxRates(stateAbbreviation).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(taxRate -> {
             if (!counting) {
-                startCounting(floatValue / 100);
+                startCounting(taxRate);
                 startButton.setText("Stop Counting");
                 counting = true;
             } else {

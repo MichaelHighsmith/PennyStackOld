@@ -2,8 +2,10 @@ package com.satyrlabs.pennystack;
 
 import android.content.Context;
 
+import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.BiFunction;
 import io.reactivex.schedulers.Schedulers;
 import io.reactivex.subjects.BehaviorSubject;
 
@@ -16,53 +18,55 @@ public class TaxCalculator {
     private float ssTax = 0.062f;
     private float medicareTax = 0.0145f;
 
-    BehaviorSubject<Float> taxSubject = BehaviorSubject.create();
+    TaxService service;
 
     TaxCalculator(Context context, String state, float hourlyWage) {
         this.context = context;
         this.state = state;
         this.hourlyWage = hourlyWage;
+
+        service = ApiClient.getClient().create(TaxService.class);
     }
 
+    public Observable<Float> getTaxRates(String state) {
 
-    public float calculateTaxRate(float stateTax) {
-        float federalTaxRate = getFederalTaxRate(hourlyWage);
-        return stateTax + federalTaxRate + ssTax + medicareTax;
-    }
+        Observable<Float> zipObservable = Observable.zip(service.getFederalTaxInfo(), service.getTaxInfo(state), new BiFunction<StateTaxResponse, StateTaxResponse, Float>() {
 
-    private float getFederalTaxRate(float hourlyWage) {
-        //TODO add federal income tax info
-        return 0.22f;
-    }
+            @Override
+            public Float apply(StateTaxResponse federal, StateTaxResponse state) {
+                float totalTaxRate = 0.0f;
 
-    public BehaviorSubject<Float> getStateTaxRate(String state) {
+            float stateTaxRate = 0.0f;
+            if (state.single.type != null && state.single.type.equals("none")) {
+                return 0.0f;
+            } else if (federal.single.type != null && federal.single.type.equals("none")) {
+                return 0.0f;
+            }
 
-        TaxService service = ApiClient.getClient().create(TaxService.class);
-        Disposable taxInfoDisposable = service.getTaxInfo(state)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(stateTaxResponse -> {
+            TaxBracket[] taxBrackets = state.single.income_tax_brackets;
+            for (int i = taxBrackets.length - 1; i < taxBrackets.length; i--) {
+                if (hourlyWage * 2000 > taxBrackets[i].bracket) {
+                    stateTaxRate = taxBrackets[i].marginal_rate;
+                    break;
+                }
+            }
 
-                    float taxRate = 0.0f;
+            float federalTaxRate = 0.0f;
+            TaxBracket[] federalTaxBrackets = federal.single.income_tax_brackets;
+            for (int i = federalTaxBrackets.length - 1; i < federalTaxBrackets.length; i--) {
+                if (hourlyWage * 2000 > federalTaxBrackets[i].bracket) {
+                    federalTaxRate = federalTaxBrackets[i].marginal_rate;
+                    break;
+                }
+            }
 
-                    if (stateTaxResponse.single.type != null && stateTaxResponse.single.type.equals("none")) {
-                        taxSubject.onNext(taxRate);
-                        return;
-                    }
+            totalTaxRate = (federalTaxRate / 100) + (stateTaxRate / 100) + ssTax + medicareTax;
 
-                    TaxBracket[] taxBrackets = stateTaxResponse.single.income_tax_brackets;
+            return totalTaxRate;
+            }
+        });
 
-                    for (int i = taxBrackets.length - 1; i < taxBrackets.length; i--) {
-                        if (hourlyWage * 2000 > taxBrackets[i].bracket) {
-                            taxRate = taxBrackets[i].marginal_rate;
-                            break;
-                        }
-                    }
-
-                    taxSubject.onNext(taxRate);
-                });
-
-        return taxSubject;
+        return zipObservable;
     }
 
     public String getStateAbbreviation(String state) {

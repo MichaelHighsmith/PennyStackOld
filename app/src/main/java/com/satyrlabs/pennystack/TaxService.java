@@ -12,4 +12,7 @@ public interface TaxService {
     @GET("/api/v2/state/2019/{State}")
     public Observable<StateTaxResponse> getTaxInfo(@Path("State") String state);
 
+    @GET("/api/v2/federal/2019")
+    public Observable<StateTaxResponse> getFederalTaxInfo();
+
 }
