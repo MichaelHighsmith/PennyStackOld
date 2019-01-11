@@ -35,34 +35,36 @@ public class TaxCalculator {
             @Override
             public Float apply(StateTaxResponse federal, StateTaxResponse state) {
                 float totalTaxRate = 0.0f;
+                float stateTaxRate = 0.0f;
+                float federalTaxRate = 0.0f;
 
-            float stateTaxRate = 0.0f;
-            if (state.single.type != null && state.single.type.equals("none")) {
-                return 0.0f;
-            } else if (federal.single.type != null && federal.single.type.equals("none")) {
-                return 0.0f;
-            }
-
-            TaxBracket[] taxBrackets = state.single.income_tax_brackets;
-            for (int i = taxBrackets.length - 1; i < taxBrackets.length; i--) {
-                if (hourlyWage * 2000 > taxBrackets[i].bracket) {
-                    stateTaxRate = taxBrackets[i].marginal_rate;
-                    break;
+                if (federal.single.type != null && federal.single.type.equals("none")) {
+                    federalTaxRate = 0.0f;
+                } else {
+                    TaxBracket[] federalTaxBrackets = federal.single.income_tax_brackets;
+                    for (int i = federalTaxBrackets.length - 1; i < federalTaxBrackets.length; i--) {
+                        if (hourlyWage * 2000 > federalTaxBrackets[i].bracket) {
+                            federalTaxRate = federalTaxBrackets[i].marginal_rate;
+                            break;
+                        }
+                    }
                 }
-            }
 
-            float federalTaxRate = 0.0f;
-            TaxBracket[] federalTaxBrackets = federal.single.income_tax_brackets;
-            for (int i = federalTaxBrackets.length - 1; i < federalTaxBrackets.length; i--) {
-                if (hourlyWage * 2000 > federalTaxBrackets[i].bracket) {
-                    federalTaxRate = federalTaxBrackets[i].marginal_rate;
-                    break;
+                if (state.single.type != null && state.single.type.equals("none")) {
+                    stateTaxRate = 0.0f;
+                } else {
+                    TaxBracket[] taxBrackets = state.single.income_tax_brackets;
+                    for (int i = taxBrackets.length - 1; i < taxBrackets.length; i--) {
+                        if (hourlyWage * 2000 > taxBrackets[i].bracket) {
+                            stateTaxRate = taxBrackets[i].marginal_rate;
+                            break;
+                        }
+                    }
                 }
-            }
 
-            totalTaxRate = (federalTaxRate / 100) + (stateTaxRate / 100) + ssTax + medicareTax;
+                totalTaxRate = (federalTaxRate / 100) + (stateTaxRate / 100) + ssTax + medicareTax;
 
-            return totalTaxRate;
+                return totalTaxRate;
             }
         });
 

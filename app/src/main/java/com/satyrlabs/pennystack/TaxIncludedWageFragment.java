@@ -90,6 +90,10 @@ public class TaxIncludedWageFragment extends Fragment {
 
     public void setUpInfo() {
 
+        if (hourlyWageEditText.getText().toString().isEmpty()) {
+            return;
+        }
+
         String hourlyWageString = hourlyWageEditText.getText().toString();
         float hourlyWage = Float.valueOf(hourlyWageString);
 

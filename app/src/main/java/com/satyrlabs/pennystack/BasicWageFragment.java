@@ -45,6 +45,10 @@ public class BasicWageFragment extends Fragment {
     }
 
     public void startCounting() {
+        if (basicHourlyWageEditText.getText().toString().isEmpty()) {
+            return;
+        }
+
         String hourlyWageString = basicHourlyWageEditText.getText().toString();
         float hourlyWage = Float.valueOf(hourlyWageString);
         float penniesPerHour = hourlyWage * 100;
